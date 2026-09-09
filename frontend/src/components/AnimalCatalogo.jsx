@@ -12,6 +12,9 @@ function AnimalCatalogo() {
   const [promedio, setPromedio] = useState(null);
   const [cargandoComentarios, setCargandoComentarios] = useState(false);
   const [errorComentarios, setErrorComentarios] = useState(null);
+  const [autor, setAutor] = useState('');
+  const [calificacion, setCalificacion] = useState('5');
+  const [comentario, setComentario] = useState('');
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
 
@@ -44,12 +47,11 @@ function AnimalCatalogo() {
       });
   }, [especieId, recintoId]);
 
-  const seleccionarAnimal = (animal) => {
-    setAnimalSeleccionado(animal);
+  const cargarComentarios = (animalId) => {
     setCargandoComentarios(true);
     setErrorComentarios(null);
 
-    fetch(`${API_URL}/animals/${animal.id}/comments`)
+    fetch(`${API_URL}/animals/${animalId}/comments`)
       .then((res) => res.json())
       .then((data) => {
         setComentarios(data.comentarios);
@@ -60,6 +62,43 @@ function AnimalCatalogo() {
         setErrorComentarios('No se pudieron cargar los comentarios');
         setCargandoComentarios(false);
       });
+  };
+
+  const seleccionarAnimal = (animal) => {
+    setAnimalSeleccionado(animal);
+    cargarComentarios(animal.id);
+  };
+
+  const crearComentario = async (event) => {
+    event.preventDefault();
+    setErrorComentarios(null);
+
+    try {
+      const respuesta = await fetch(
+        `${API_URL}/animals/${animalSeleccionado.id}/comments`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            autor,
+            calificacion: Number(calificacion),
+            comentario,
+          }),
+        },
+      );
+
+      const data = await respuesta.json();
+
+      if (!respuesta.ok) {
+        setErrorComentarios(data.detalles?.[0]?.mensaje || data.error);
+        return;
+      }
+
+      setComentario('');
+      cargarComentarios(animalSeleccionado.id);
+    } catch {
+      setErrorComentarios('No se pudo enviar el comentario');
+    }
   };
 
   if (cargando) return <p>Cargando animales...</p>;
@@ -125,6 +164,40 @@ function AnimalCatalogo() {
               </li>
             ))}
           </ul>
+
+          <form onSubmit={crearComentario}>
+            <h4>Agregar comentario</h4>
+            <label>
+              Autor:{' '}
+              <input
+                value={autor}
+                onChange={(event) => setAutor(event.target.value)}
+                required
+              />
+            </label>
+            <br />
+            <label>
+              Calificación:{' '}
+              <select value={calificacion} onChange={(event) => setCalificacion(event.target.value)}>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+              </select>
+            </label>
+            <br />
+            <label>
+              Comentario:{' '}
+              <textarea
+                value={comentario}
+                onChange={(event) => setComentario(event.target.value)}
+                required
+              />
+            </label>
+            <br />
+            <button type="submit">Publicar comentario</button>
+          </form>
         </div>
       )}
     </div>
