@@ -7,6 +7,11 @@ function AnimalCatalogo() {
   const [recintos, setRecintos] = useState([]);
   const [especieId, setEspecieId] = useState('');
   const [recintoId, setRecintoId] = useState('');
+  const [animalSeleccionado, setAnimalSeleccionado] = useState(null);
+  const [comentarios, setComentarios] = useState([]);
+  const [promedio, setPromedio] = useState(null);
+  const [cargandoComentarios, setCargandoComentarios] = useState(false);
+  const [errorComentarios, setErrorComentarios] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
 
@@ -38,6 +43,24 @@ function AnimalCatalogo() {
         setCargando(false);
       });
   }, [especieId, recintoId]);
+
+  const seleccionarAnimal = (animal) => {
+    setAnimalSeleccionado(animal);
+    setCargandoComentarios(true);
+    setErrorComentarios(null);
+
+    fetch(`${API_URL}/animals/${animal.id}/comments`)
+      .then((res) => res.json())
+      .then((data) => {
+        setComentarios(data.comentarios);
+        setPromedio(data.averageRating);
+        setCargandoComentarios(false);
+      })
+      .catch(() => {
+        setErrorComentarios('No se pudieron cargar los comentarios');
+        setCargandoComentarios(false);
+      });
+  };
 
   if (cargando) return <p>Cargando animales...</p>;
   if (error) return <p>{error}</p>;
@@ -71,12 +94,39 @@ function AnimalCatalogo() {
       <ul>
         {animales.map((animal) => (
           <li key={animal.id}>
-            {animal.nombre} — {animal.especie.nombre}, {animal.recinto.nombre}
+            <button type="button" onClick={() => seleccionarAnimal(animal)}>
+              {animal.nombre}
+            </button>
+            {' — '}{animal.especie.nombre}, {animal.recinto.nombre}
           </li>
         ))}
       </ul>
 
       {animales.length === 0 && <p>No hay animales con esos filtros.</p>}
+
+      {animalSeleccionado && (
+        <div>
+          <h3>Detalle de {animalSeleccionado.nombre}</h3>
+          <p>Edad: {animalSeleccionado.edad} año(s)</p>
+          <p>Peso: {animalSeleccionado.peso ?? 'Sin información'} kg</p>
+          <p>Especie: {animalSeleccionado.especie.nombre}</p>
+          <p>Recinto: {animalSeleccionado.recinto.nombre}</p>
+
+          <h4>Comentarios</h4>
+          {promedio !== null && <p>Promedio: {promedio.toFixed(1)} / 5</p>}
+          {cargandoComentarios && <p>Cargando comentarios...</p>}
+          {errorComentarios && <p>{errorComentarios}</p>}
+          {!cargandoComentarios && comentarios.length === 0 && <p>No hay comentarios.</p>}
+          <ul>
+            {comentarios.map((item) => (
+              <li key={item.id}>
+                <strong>{item.autor} ({item.calificacion}/5):</strong>{' '}
+                {item.comentario}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
